@@ -40,8 +40,8 @@ ${val m = b.length
       x(i)
     else
     ${// XXX: can't use `sum = sum + ...` (as tutorial does) since that 
-      // would lead to a StackOverflow error. This is essentially the same, but
-      // we accumulate on an array and then we fold.
+      // leads to a StackOverflow error (why?). This is essentially the same,
+      // but we accumulate on an array and then we fold.
       val tosum: Array[Code[Float]] = Array.fill(m)('{0.0f})
       for k <- 0 to m-1 do
         tosum.update(k, '{${b(k)} * x(i-${Expr(k)})})
@@ -68,10 +68,30 @@ ${val m = b.length
     Array.range(0, x.length).map(y)}}
 }
 
-// adaptative
+// adaptive
+
+def filterAdaptive(
+    threshold: Int = 3)(
+    b: Array[Float]): Code[Array[Float] => Array[Float]] = {
+  val m = b.length
+  if m <= threshold then
+    filterStaged(b)
+  else
+  '{x =>
+    def y(i: Int): Float =
+      if i < ${Expr(m)}-1 then
+        x(i)
+      else
+        val tosum: Array[Float] = Array.fill(${Expr(m)})(0.0f)
+        for k <- 0 to ${Expr(m)}-1 do
+          tosum.update(k, ${Expr(b)}(k) * x(i-k))
+        tosum.foldLeft(0.0f)((acc, c) => acc + c)
+    Array.range(0, x.length).map(y)
+  }
+}
 
 // Test it!
 
 @main def main: Unit =
-  debug(filterStaged(Array[Float](0.5, 0.3, 0.2)))
+  debug(filterAdaptive()(Array[Float](0.5, 0.3, 0.2, 0.1)))
 
