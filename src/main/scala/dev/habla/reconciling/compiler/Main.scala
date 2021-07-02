@@ -118,7 +118,7 @@ def compileUOptimized(e: Exp): Code[ValueUnion] =
         // if not a constant
       case '{$bc: Boolean} => '{if ${bc} then ${compileUOptimized(thn)} else ${compileUOptimized(els)}}
       case x =>
-        quotes.reflect.report.error("If statement requires a boolean condition\nfound: ${quotes.show(x)}")
+        quotes.reflect.report.error(s"If statement requires a boolean condition\nfound: ${quotes.show(x)}")
         Expr(0)
 
 
