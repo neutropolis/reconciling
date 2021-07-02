@@ -88,6 +88,31 @@ def compileU(e: Exp): Code[ValueUnion] = e match
       Expr(0)
 
 
+def compileUOptimized(e: Exp): Code[ValueUnion] =
+  import quotes.reflect.*
+  e match
+    case Num(i) => Expr(i)
+    case Bool(b) => Expr(b)
+    case Gt(Num(l), Num(r)) => Expr(l > r)
+    case Gt(l, r) => (compileUOptimized(l).asTerm, compileUOptimized(r).asTerm) match
+      case (Literal(IntConstant(lc)), Literal(IntConstant(rc))) => Expr(lc > rc)
+      case (a, b) =>
+        quotes.reflect.report.error(s"GT must be formed with numeric values:\n" +
+          s"left: ${quotes.show(compileUOptimized(l))}\n" +
+          s"right: ${quotes.show(compileUOptimized(r))}")
+          Expr(true)
+
+    case Exp.If(cnd, thn, els) => compileUOptimized(cnd) match
+      case '{true} => '{${compileUOptimized(thn)}}
+      case '{false} => '{${compileUOptimized(els)}}
+      case '{$bc: Boolean} => '{if ${bc} then ${compileUOptimized(thn)} else ${compileUOptimized(els)}}
+      case x =>
+        println(summon[Quotes].show(compileUOptimized(cnd)))
+          quotes.reflect.report.error("If statement requires a boolean condition\n" +
+        s"found: ${quotes.show(x)}")
+        Expr(0)
+
+
 // Expression compiler (~ macro)
 
 @main def main: Unit =
@@ -95,7 +120,8 @@ def compileU(e: Exp): Code[ValueUnion] = e match
   //debug(compile(ex))
   //showCode(compile(ex))
   debug(compileU(ex2))
-  debug(compileU(wr_ex))
-  debug(compileU(wr_ex2))
+  debug(compileUOptimized(ex2))
+  //debug(compileU(wr_ex))
+  //debug(compileU(wr_ex2))
   //debug(compileU(Gt(Num(3), Num(5))))
 
