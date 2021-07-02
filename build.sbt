@@ -1,4 +1,4 @@
-val scala3Version = "3.0.0-RC2"
+val scala3Version = "3.0.0"
 
 lazy val root = project
   .in(file("."))
@@ -9,7 +9,6 @@ lazy val root = project
     scalaVersion := scala3Version,
 
     libraryDependencies ++= Seq(
-      "com.novocode" % "junit-interface" % "0.11" % "test",
       "org.scala-lang" %% "scala3-staging" % scalaVersion.value
       )
   )
