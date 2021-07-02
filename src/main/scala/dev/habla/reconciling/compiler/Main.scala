@@ -64,7 +64,6 @@ def interpretU(e: Exp): ValueUnion = e match
   case If(cnd, thn, els) => interpretU(cnd) match
     case b : Boolean => if b then interpretU(thn) else interpretU(els)
     case _ => throw Error(s"Expected boolean condition, but found '$cnd'")
-  case _ => throw Error("Unexpected error")
 
 // Expression compiler (~ runtime)
 
@@ -88,28 +87,38 @@ def compileU(e: Exp): Code[ValueUnion] = e match
       Expr(0)
 
 
+object TermF:
+  def unapply(using Quotes)(expr: Expr[_]): Option[quotes.reflect.Term] =
+    import quotes.reflect.*
+    Some(expr.asTerm)
+
 def compileUOptimized(e: Exp): Code[ValueUnion] =
   import quotes.reflect.*
   e match
     case Num(i) => Expr(i)
     case Bool(b) => Expr(b)
     case Gt(Num(l), Num(r)) => Expr(l > r)
-    case Gt(l, r) => (compileUOptimized(l).asTerm, compileUOptimized(r).asTerm) match
-      case (Literal(IntConstant(lc)), Literal(IntConstant(rc))) => Expr(lc > rc)
-      case (a, b) =>
-        quotes.reflect.report.error(s"GT must be formed with numeric values:\n" +
-          s"left: ${quotes.show(compileUOptimized(l))}\n" +
-          s"right: ${quotes.show(compileUOptimized(r))}")
-          Expr(true)
+    case Gt(l, r) =>
+      val a: Term = compileUOptimized(l).asTerm
+      (compileUOptimized(l), compileUOptimized(r)) match
+          // if both elements are constant int's
+        case (TermF(Literal(IntConstant(lc))), TermF(Literal(IntConstant(rc)))) => Expr(lc > rc)
+          // if both elements are integer
+        case ('{$lc: Int}, '{$rc: Int}) => '{${lc} > ${rc}}
+        case (a, b) =>
+          quotes.reflect.report.error(s"GT must be formed with numeric values:\n" +
+            s"left: ${quotes.show(a)}\n" +
+            s"right: ${quotes.show(b)}")
+            Expr(true)
 
     case Exp.If(cnd, thn, els) => compileUOptimized(cnd) match
-      case '{true} => '{${compileUOptimized(thn)}}
-      case '{false} => '{${compileUOptimized(els)}}
+        // if the condition is a constant
+      case '{true} => compileUOptimized(thn)
+      case '{false} => compileUOptimized(els)
+        // if not a constant
       case '{$bc: Boolean} => '{if ${bc} then ${compileUOptimized(thn)} else ${compileUOptimized(els)}}
       case x =>
-        println(summon[Quotes].show(compileUOptimized(cnd)))
-          quotes.reflect.report.error("If statement requires a boolean condition\n" +
-        s"found: ${quotes.show(x)}")
+        quotes.reflect.report.error("If statement requires a boolean condition\nfound: ${quotes.show(x)}")
         Expr(0)
 
 
