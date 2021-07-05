@@ -125,11 +125,11 @@ def compileUOptimized(e: Exp): Code[ValueUnion] =
 // Expression compiler (~ macro)
 
 @main def main: Unit =
-  println(interpretU(ex2))
   //debug(compile(ex))
   //showCode(compile(ex))
-  debug(compileU(ex2))
-  debug(compileUOptimized(ex2))
+  debug(compile(ex))
+  debug(compileU(ex))
+  debug(compileUOptimized(ex))
   //debug(compileU(wr_ex))
   //debug(compileU(wr_ex2))
   //debug(compileU(Gt(Num(3), Num(5))))
